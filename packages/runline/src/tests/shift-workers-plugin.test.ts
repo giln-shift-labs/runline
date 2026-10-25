@@ -16,6 +16,13 @@ const SHIFT_WORKERS_ACTIONS = [
   "app.resume",
   "app.suspend",
   "data.get",
+  "database.batch",
+  "database.create",
+  "database.grant",
+  "database.list",
+  "database.query",
+  "database.revoke",
+  "database.tables",
   "deployment.create",
   "egress.set",
   "logs.list",
@@ -49,7 +56,9 @@ describe("shiftWorkers plugin", () => {
     ]);
     for (const action of plugin.actions) {
       const read =
-        action.name.endsWith(".list") || action.name.endsWith(".get");
+        action.name.endsWith(".list") ||
+        action.name.endsWith(".get") ||
+        action.name === "database.tables";
       assert.equal(action.access, read ? "read" : "write", action.name);
     }
   });

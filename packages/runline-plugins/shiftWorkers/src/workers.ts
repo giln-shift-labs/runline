@@ -22,7 +22,10 @@ const GUIDE =
   'An idle app sleeps (status "asleep", no pods, no CPU charge) until its ' +
   "next request: allow 45 s for that first request (about 3 s normally, up " +
   'to about 80 s if a node must start); on 503 "the application is ' +
-  'starting", retry after the Retry-After seconds, for up to 2 minutes.';
+  'starting", retry after the Retry-After seconds, for up to 2 minutes. ' +
+  "Data one app keeps (D1, KV, R2, Durable Objects) is its own; for data " +
+  "several apps share, create a database (database.create) and grant each " +
+  "app read or write (database.grant).";
 
 const app = (name: string) => `${BASE}/apps/${pathSegment(name)}`;
 
@@ -362,6 +365,12 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
         app: App,
         name: t.String({ minLength: 1, maxLength: 100 }),
         expiresInDays: t.Optional(t.Integer({ minimum: 1, maximum: 365 })),
+        role: t.Optional(
+          t.Union([t.Literal("read"), t.Literal("write")], {
+            description:
+              "On a database: read only, or read and write (default).",
+          }),
+        ),
       },
       STRICT_OBJECT,
     ),
@@ -370,10 +379,142 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
         app: string;
         name: string;
         expiresInDays?: number;
+        role?: "read" | "write";
       };
       return request(ctx, `${app(name)}/share-tokens`, {
         method: "POST",
         body: JSON.stringify(body),
+      });
+    },
+  });
+
+  // ---- Shift databases: a shared SQL database, itself a celld app ----
+  const db = (name: string) => `${BASE}/databases/${pathSegment(name)}`;
+  const Database = t.String({
+    pattern: "^[a-z][a-z0-9-]{0,19}$",
+    description: "The database's name.",
+  });
+  const Param = t.Union([t.String(), t.Number(), t.Boolean(), t.Null()]);
+  const Statement = t.Object(
+    {
+      sql: t.String({ minLength: 1, maxLength: 100000 }),
+      params: t.Optional(t.Array(Param, { maxItems: 100 })),
+    },
+    STRICT_OBJECT,
+  );
+
+  rl.registerAction("database.list", {
+    access: "read",
+    description:
+      "The organization's databases (shared SQLite databases, each its own always-private celld app): status, grants and access codes.",
+    inputSchema: t.Object({}, STRICT_OBJECT),
+    execute: (_input, ctx) => request(ctx, `${BASE}/databases`),
+  });
+
+  rl.registerAction("database.create", {
+    access: "write",
+    description:
+      "Create a shared database (1-20 lowercase letters, digits, hyphens). It counts as an app toward the organization's limit, sleeps when idle like an app, and is always private. Ask the user before creating one.",
+    inputSchema: t.Object({ name: Database }, STRICT_OBJECT),
+    execute: (input, ctx) =>
+      request(ctx, `${BASE}/databases`, {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+  });
+
+  rl.registerAction("database.tables", {
+    access: "read",
+    description: "A database's tables, their columns and row counts.",
+    inputSchema: t.Object({ database: Database }, STRICT_OBJECT),
+    execute: (input, ctx) =>
+      request(ctx, `${db((input as { database: string }).database)}/tables`),
+  });
+
+  rl.registerAction("database.query", {
+    access: "write",
+    description:
+      "Run one SQL statement (SQLite) with ? parameters. Up to 1,000 rows / 2 MB come back (truncated: true says more exist). readOnly: true refuses any write. The first call after an idle spell can take a few seconds (the database wakes).",
+    inputSchema: t.Object(
+      {
+        database: Database,
+        sql: t.String({ minLength: 1, maxLength: 100000 }),
+        params: t.Optional(t.Array(Param, { maxItems: 100 })),
+        readOnly: t.Optional(t.Boolean()),
+      },
+      STRICT_OBJECT,
+    ),
+    execute: (input, ctx) => {
+      const { database, ...body } = input as { database: string };
+      return request(ctx, `${db(database)}/query`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    },
+  });
+
+  rl.registerAction("database.batch", {
+    access: "write",
+    description:
+      "Run up to 100 statements as one transaction: all succeed or none apply.",
+    inputSchema: t.Object(
+      {
+        database: Database,
+        statements: t.Array(Statement, { minItems: 1, maxItems: 100 }),
+        readOnly: t.Optional(t.Boolean()),
+      },
+      STRICT_OBJECT,
+    ),
+    execute: (input, ctx) => {
+      const { database, ...body } = input as { database: string };
+      return request(ctx, `${db(database)}/batch`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    },
+  });
+
+  rl.registerAction("database.grant", {
+    access: "write",
+    description:
+      "Let an app use a database, read or read-write. The app gets secrets DB_<NAME>_URL and DB_<NAME>_TOKEN (its code calls POST <url>/query with {sql, params} and Authorization: Bearer <token>), and its live version is redeployed so it has them. Replaces the app's earlier grant.",
+    inputSchema: t.Object(
+      {
+        database: Database,
+        app: App,
+        role: t.Union([t.Literal("read"), t.Literal("write")]),
+      },
+      STRICT_OBJECT,
+    ),
+    execute: (input, ctx) => {
+      const {
+        database,
+        app: target,
+        role,
+      } = input as {
+        database: string;
+        app: string;
+        role: string;
+      };
+      return request(ctx, `${db(database)}/grants/${pathSegment(target)}`, {
+        method: "PUT",
+        body: JSON.stringify({ role }),
+      });
+    },
+  });
+
+  rl.registerAction("database.revoke", {
+    access: "write",
+    description:
+      "Take an app's access to a database away: its code stops working at once and its secrets are removed (the app is redeployed).",
+    inputSchema: t.Object({ database: Database, app: App }, STRICT_OBJECT),
+    execute: (input, ctx) => {
+      const { database, app: target } = input as {
+        database: string;
+        app: string;
+      };
+      return request(ctx, `${db(database)}/grants/${pathSegment(target)}`, {
+        method: "DELETE",
       });
     },
   });
@@ -389,7 +530,8 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
 
   rl.registerAction("shareToken.revoke", {
     access: "write",
-    description: "Revoke an access code; it stops working within seconds, for that person only.",
+    description:
+      "Revoke an access code; it stops working within seconds, for that person only.",
     inputSchema: t.Object(
       { app: App, id: t.String({ minLength: 1 }) },
       STRICT_OBJECT,
