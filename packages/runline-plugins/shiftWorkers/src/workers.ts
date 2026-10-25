@@ -356,7 +356,7 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
   rl.registerAction("shareToken.create", {
     access: "write",
     description:
-      "Create a share token for one application (makes it private): anyone holding it may call the app with it as a bearer. Returned once; optional expiry; revocable.",
+      "Create an access code for one person or program (makes the app private). Returns `code` (e.g. K7QM-4ZP2-X9TB-R3VD: a person types it once per browser at the app's address, or opens <url>/.shift/access?code=<code>) and `token` (a program sends it as a bearer). Shown once: give it to the user to pass on; never send it anywhere yourself. Works on any device; optional expiry; revocable per person.",
     inputSchema: t.Object(
       {
         app: App,
@@ -381,7 +381,7 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
   rl.registerAction("shareToken.list", {
     access: "read",
     description:
-      "An application's share tokens (names, expiry, revoked; never the token itself).",
+      "An application's access codes (for whom, expiry, revoked; never the code itself).",
     inputSchema: t.Object({ app: App }, STRICT_OBJECT),
     execute: (input, ctx) =>
       request(ctx, `${app((input as { app: string }).app)}/share-tokens`),
@@ -389,7 +389,7 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
 
   rl.registerAction("shareToken.revoke", {
     access: "write",
-    description: "Revoke a share token; it stops working within seconds.",
+    description: "Revoke an access code; it stops working within seconds, for that person only.",
     inputSchema: t.Object(
       { app: App, id: t.String({ minLength: 1 }) },
       STRICT_OBJECT,
