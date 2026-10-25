@@ -257,6 +257,12 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
       {
         app: App,
         private: t.Optional(t.Boolean()),
+        allowPublicWithDatabases: t.Optional(
+          t.Boolean({
+            description:
+              "Publish (private: false) even though the app holds database grants (refused otherwise). Only with the user's explicit yes.",
+          }),
+        ),
         internal: t.Optional(t.Boolean()),
         allow: t.Optional(
           t.Union([
@@ -483,6 +489,12 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
         database: Database,
         app: App,
         role: t.Union([t.Literal("read"), t.Literal("write")]),
+        allowPublic: t.Optional(
+          t.Boolean({
+            description:
+              "Grant to a public app anyway (refused otherwise): its code could expose the data to anyone. Only with the user's explicit yes.",
+          }),
+        ),
       },
       STRICT_OBJECT,
     ),
@@ -490,15 +502,16 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
       const {
         database,
         app: target,
-        role,
+        ...body
       } = input as {
         database: string;
         app: string;
         role: string;
+        allowPublic?: boolean;
       };
       return request(ctx, `${db(database)}/grants/${pathSegment(target)}`, {
         method: "PUT",
-        body: JSON.stringify({ role }),
+        body: JSON.stringify(body),
       });
     },
   });
