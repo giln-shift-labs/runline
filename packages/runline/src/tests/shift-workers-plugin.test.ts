@@ -22,6 +22,7 @@ const SHIFT_WORKERS_ACTIONS = [
   "database.list",
   "database.query",
   "database.revoke",
+  "database.setLimit",
   "database.tables",
   "deployment.create",
   "egress.set",

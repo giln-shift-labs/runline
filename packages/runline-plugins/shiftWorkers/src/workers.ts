@@ -516,6 +516,29 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
     },
   });
 
+  rl.registerAction("database.setLimit", {
+    access: "write",
+    description:
+      "Set a database's size limit in GB (null: back to the default, 5 GB). Writes that would grow it past the limit are refused (reads and deletes keep working). Only the organization's owners and admins may; a key gets 403. A write's answer carries `warning` above 1 GB: tell the user.",
+    inputSchema: t.Object(
+      {
+        database: Database,
+        maxGb: t.Union([t.Number({ exclusiveMinimum: 0 }), t.Null()]),
+      },
+      STRICT_OBJECT,
+    ),
+    execute: (input, ctx) => {
+      const { database, maxGb } = input as {
+        database: string;
+        maxGb: number | null;
+      };
+      return request(ctx, `${db(database)}/limit`, {
+        method: "PUT",
+        body: JSON.stringify({ maxGb }),
+      });
+    },
+  });
+
   rl.registerAction("database.revoke", {
     access: "write",
     description:
