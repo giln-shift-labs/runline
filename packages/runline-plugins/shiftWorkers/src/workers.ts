@@ -622,7 +622,7 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
   rl.registerAction("egress.set", {
     access: "write",
     description:
-      "Restrict the internet hostnames an application may call (e.g. api.stripe.com, *.example.com), or lift the restriction with null.",
+      "Restrict the internet hostnames an application may call (e.g. api.stripe.com, *.example.com). An empty list blocks every outbound call (DNS still answers); null lifts the restriction. app.get shows allowedHosts only while one is set.",
     inputSchema: t.Object(
       {
         app: App,
