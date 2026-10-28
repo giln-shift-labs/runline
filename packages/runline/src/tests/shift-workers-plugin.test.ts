@@ -12,6 +12,7 @@ const SHIFT_WORKERS_ACTIONS = [
   "app.list",
   "app.purge",
   "app.repair",
+  "app.request",
   "app.restore",
   "app.resume",
   "app.suspend",

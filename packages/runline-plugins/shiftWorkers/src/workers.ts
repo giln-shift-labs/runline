@@ -249,6 +249,45 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
       request(ctx, `${app((input as { app: string }).app)}/data`),
   });
 
+  rl.registerAction("app.request", {
+    access: "write",
+    description:
+      "Call one of the organization's own applications and get its answer: how an agent uses an app it built (an API, a calculator, a report) with no browser and no access code. Shift Cloud makes the call: it checks you're on the app's access list, then calls the app with its own credential, so your key never reaches the app. path is the app's own path and query, from its root (\"/\", \"/api/entries?limit=5\"). Answers {status, contentType, body} — the app's own status, and its body parsed when it is JSON. A sleeping app is woken (the first call can take a few seconds). Up to 5 MB.",
+    inputSchema: t.Object(
+      {
+        app: App,
+        method: t.Optional(
+          t.Union(
+            ["GET", "POST", "PUT", "PATCH", "DELETE"].map((m) => t.Literal(m)),
+            { description: "Default GET" },
+          ),
+        ),
+        path: t.String({ pattern: "^/", maxLength: 2048 }),
+        headers: t.Optional(
+          t.Record(t.String(), t.String({ maxLength: 4096 }), {
+            description:
+              "Passed on, except credentials (authorization, cookie) and Shift's own headers",
+          }),
+        ),
+        body: t.Optional(
+          t.String({
+            maxLength: 900000,
+            description:
+              "The request body as text (JSON: stringify it and set content-type)",
+          }),
+        ),
+      },
+      STRICT_OBJECT,
+    ),
+    execute: (input, ctx) => {
+      const { app: name, ...call } = input as { app: string };
+      return request(ctx, `${app(name)}/request`, {
+        method: "POST",
+        body: JSON.stringify(call),
+      });
+    },
+  });
+
   rl.registerAction("access.set", {
     access: "write",
     description:
