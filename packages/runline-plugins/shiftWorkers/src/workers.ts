@@ -622,7 +622,7 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
   rl.registerAction("egress.set", {
     access: "write",
     description:
-      "Restrict the internet hostnames an application may call (e.g. api.stripe.com, *.example.com). An empty list blocks every outbound call (DNS still answers; databases granted to the app stay reachable); null lifts the restriction. app.get shows allowedHosts only while one is set.",
+      "Restrict the internet hostnames an application may call (e.g. api.stripe.com, *.example.com). An empty list blocks every outbound call (databases granted to the app stay reachable); null lifts the restriction. A call to a host not listed fails at once: its name doesn't resolve (a raw IP address waits until it times out). A change holds at once, and the app's pods restart within about a minute, dropping addresses and connections kept from before. app.get shows allowedHosts only while one is set.",
     inputSchema: t.Object(
       {
         app: App,
