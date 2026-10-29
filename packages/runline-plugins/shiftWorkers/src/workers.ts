@@ -622,7 +622,7 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
   rl.registerAction("egress.set", {
     access: "write",
     description:
-      "Restrict the internet hostnames an application may call (e.g. api.stripe.com, *.example.com). An empty list blocks every outbound call (DNS still answers); null lifts the restriction. app.get shows allowedHosts only while one is set.",
+      "Restrict the internet hostnames an application may call (e.g. api.stripe.com, *.example.com). An empty list blocks every outbound call (DNS still answers; databases granted to the app stay reachable); null lifts the restriction. app.get shows allowedHosts only while one is set.",
     inputSchema: t.Object(
       {
         app: App,
@@ -648,7 +648,7 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
   rl.registerAction("sleep.set", {
     access: "write",
     description:
-      "When an idle application sleeps: after this many idle minutes (5 to 10080; default 15) it has no pods and costs no CPU, and its next request wakes it (about 3 s, up to about 80 s if a node must start). null keeps it always on (no cold starts, its two pods are charged all the time).",
+      "When an idle application sleeps: after this many idle minutes (5 to 10080; default 15) it has no pods and costs no CPU, and its next request wakes it (about 3 s, up to about 80 s if a node must start). Idleness is checked every 5 minutes, so it falls asleep 0-5 minutes after the time is up. null keeps it always on (no cold starts, its two pods are charged all the time). An app with cron triggers, queue consumers or Workflows is always on regardless (app.get: runsOnItsOwn).",
     inputSchema: t.Object(
       {
         app: App,
