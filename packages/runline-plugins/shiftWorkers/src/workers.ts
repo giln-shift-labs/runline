@@ -291,7 +291,7 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
   rl.registerAction("access.set", {
     access: "write",
     description:
-      'Who may reach an application. allow: the callers a private app admits — {kind:"org",id}, {kind:"key",id} (one agent\'s key), {kind:"user",id|email} (default: this organization). To share an app with a person, add their email: they open its address and sign in with that email (Google, Microsoft, GitHub or email, through Shift Cloud), even with no Shift Cloud account, and reach only what is shared with them; removing it ends their access at once. Signing in needs the app's address to be https://. private: only callers sending a Shift Cloud key/token of this organization as a bearer. internal: no public address — only the internal gateway inside Shift\'s network. allowedIps: only these client CIDRs (null lifts). Fields left out keep their value.',
+      'Who may reach an application. allow: the callers a private app admits — {kind:"org",id}, {kind:"key",id} (one agent\'s key), {kind:"user",id|email} (default: this organization). To share an app with a person, add their email: they open its address and sign in with that email (Google, Microsoft, GitHub or email, through Shift Cloud), even with no Shift Cloud account, and reach only what is shared with them; removing it ends their access at once. Signing in needs the app\'s address to be https://. private: only callers sending a Shift Cloud key/token of this organization as a bearer. internal: no public address — only the internal gateway inside Shift\'s network. allowedIps: only these client CIDRs (null lifts). Fields left out keep their value.',
     inputSchema: t.Object(
       {
         app: App,
