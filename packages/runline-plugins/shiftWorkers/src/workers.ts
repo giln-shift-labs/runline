@@ -291,7 +291,7 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
   rl.registerAction("access.set", {
     access: "write",
     description:
-      'Who may reach an application. allow: the callers a private app admits — {kind:"org",id}, {kind:"key",id} (one agent\'s key), {kind:"user",id|email} (default: this organization). private: only callers sending a Shift Cloud key/token of this organization as a bearer. internal: no public address — only the internal gateway inside Shift\'s network. allowedIps: only these client CIDRs (null lifts). Fields left out keep their value.',
+      'Who may reach an application. allow: the callers a private app admits — {kind:"org",id}, {kind:"key",id} (one agent\'s key), {kind:"user",id|email} (default: this organization). To share an app with a person, add their email: they open its address and sign in with that email (Google, Microsoft, GitHub or email, through Shift Cloud), even with no Shift Cloud account, and reach only what is shared with them; removing it ends their access at once. Signing in needs the app's address to be https://. private: only callers sending a Shift Cloud key/token of this organization as a bearer. internal: no public address — only the internal gateway inside Shift\'s network. allowedIps: only these client CIDRs (null lifts). Fields left out keep their value.',
     inputSchema: t.Object(
       {
         app: App,
@@ -404,7 +404,7 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
   rl.registerAction("shareToken.create", {
     access: "write",
     description:
-      "Create an access code for one person or program (makes the app private). Returns `code` (e.g. K7QM-4ZP2-X9TB-R3VD: a person types it once per browser at the app's address, or opens <url>/.shift/access?code=<code>) and `token` (a program sends it as a bearer). Shown once: give it to the user to pass on; never send it anywhere yourself. Works on any device; optional expiry; revocable per person.",
+      "Databases only: create an access code for a program that queries a shared database (sends `token` as a bearer), with a role. Shown once: give it to the user to pass on; never send it anywhere yourself. Optional expiry; revocable. Apps have no access codes (refused): share an app with a person by email with access.set (allow {kind:\"user\", email}); they sign in with that email.",
     inputSchema: t.Object(
       {
         app: App,
@@ -597,7 +597,7 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
   rl.registerAction("shareToken.list", {
     access: "read",
     description:
-      "An application's access codes (for whom, expiry, revoked; never the code itself).",
+      "A database's access codes (for which program, expiry, revoked; never the code itself). Apps have none.",
     inputSchema: t.Object({ app: App }, STRICT_OBJECT),
     execute: (input, ctx) =>
       request(ctx, `${app((input as { app: string }).app)}/share-tokens`),
@@ -606,7 +606,7 @@ export function registerWorkersActions(rl: RunlinePluginAPI) {
   rl.registerAction("shareToken.revoke", {
     access: "write",
     description:
-      "Revoke an access code; it stops working within seconds, for that person only.",
+      "Revoke a database's access code; it stops working within seconds.",
     inputSchema: t.Object(
       { app: App, id: t.String({ minLength: 1 }) },
       STRICT_OBJECT,
